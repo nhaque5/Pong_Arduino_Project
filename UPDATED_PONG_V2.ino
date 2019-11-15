@@ -33,6 +33,15 @@ int x, y; // Variables for the coordinates where the display has been pressed
 #define YELLOW          0xFFE0
 #define WHITE           0xFFFF
 
+// Joystick Controls
+const int S_pin = 22;
+const int X_pin = 0; 
+const int Y_pin = 1;
+const int S_pin = 23;
+const int X_pin = 2;
+const int Y_pin = 3;  
+
+
 const unsigned long PADDLE_RATE = 33;
 const unsigned long BALL_RATE = 20;
 const int8_t PADDLE_HEIGHT = 24;
@@ -40,8 +49,6 @@ int MAX_SCORE = 10;
 
 int CPU_SCORE = 0;
 int PLAYER_SCORE = 0;
-
-
 
 
 void drawCourt(); 
@@ -52,20 +59,6 @@ uint8_t ball_dir_x = 1, ball_dir_y = 1;
 
 boolean gameIsRunning = true;
 boolean resetBall = false;
-
-
-
-void setup() {
-  // Initiate display
-  myGLCD.InitLCD();
-  myGLCD.clrScr();
-  myTouch.InitTouch();
-  myTouch.setPrecision(PREC_MEDIUM);
-  
-  highestScore = EEPROM.read(0); // Read the highest score from the EEPROM
-  
-  initiateGame(); // Initiate the game
-
 
 static const unsigned char pong []PROGMEM = {
 0xff,0xe0,0x0,0x3f,0x80,0x7,0xe0,0x7,0xc0,0x3,0xfc,0x0,
@@ -133,40 +126,61 @@ const uint8_t PLAYER_X = 85;
 uint8_t player_y = 16;
 
 void setup() {
+  // Initiate display
+  myGLCD.InitLCD();
+  myGLCD.clrScr();
+  myTouch.InitTouch();
+  myTouch.setPrecision(PREC_MEDIUM);
   
-    pinMode(UP_BUTTON, INPUT_PULLUP);
-    pinMode(DOWN_BUTTON, INPUT_PULLUP);
-    display.begin();
-    display.fillScreen(BLACK);
-    display.drawBitmap(3,0,pong,89,24,GREEN);
-    display.drawBitmap(10,30,game,75,26,RED);
-    while(digitalRead(UP_BUTTON) == HIGH && digitalRead(DOWN_BUTTON) == HIGH)  
+  highestScore = EEPROM.read(0); // Read the highest score from the EEPROM
+  
+  initiateGame(); // Initiate the game
+
+  // Initialize serial communication at 9600 bits per second:
+  Serial.begin(9600);
+  pinMode(S_pin,INPUT_PULLUP);// setting pin sw as input
+  display.begin();
+  display.fillScreen(BLACK);
+  display.drawBitmap(3,0,pong,89,24,GREEN);
+  display.drawBitmap(10,30,game,75,26,RED);
+  while(digitalRead(UP_BUTTON) == HIGH && digitalRead(DOWN_BUTTON) == HIGH)  
   {
-    delay(100);
+  delay(100);
   }
-    unsigned long start = millis();
+  unsigned long start = millis();
 
     
-    display.fillScreen(BLACK);
-    drawCourt();
+  display.fillScreen(BLACK);
+  drawCourt();
 
-    while(millis() - start < 2000);
-    ball_update = millis();
-    paddle_update = ball_update;
-    ball_x = random(25,65); 
-    ball_y = random(3,63);
+  while(millis() - start < 2000);
+  ball_update = millis();
+  paddle_update = ball_update;
+  ball_x = random(25,65); 
+  ball_y = random(3,63);
 }
 
 void loop() {
+  Serial.print("S Pin: ");
+  Serial.print(digitalRead(S_pin));
+  Serial.print("\n");
+  Serial.print("X-axis: ");
+  Serial.print(analogRead(X_pin));
+  Serial.print("\n");
+  Serial.print("Y-axis: ");
+  Serial.println(analogRead(Y_pin));
+  Serial.print("\n");
+  delay(200);
+  
 
-    unsigned long time = millis();    
-    static bool up_state = false;
-    static bool down_state = false;
+  unsigned long time = millis();    
+  static bool up_state = false;
+  static bool down_state = false;
     
-    up_state |= (digitalRead(UP_BUTTON) == LOW);
-    down_state |= (digitalRead(DOWN_BUTTON) == LOW);
+  up_state |= (digitalRead(UP_BUTTON) == LOW);
+  down_state |= (digitalRead(DOWN_BUTTON) == LOW);
 
-    if(resetBall)
+  if(resetBall)
     {
       ball_x = random(25,70); 
       ball_y = random(3,63);
@@ -182,14 +196,13 @@ void loop() {
       
       
       resetBall=false;
-    }
+     }
 
-    if(time > ball_update && gameIsRunning) {
-        uint8_t new_x = ball_x + ball_dir_x;
-        uint8_t new_y = ball_y + ball_dir_y;
-
-        // Check if we hit the vertical walls
-        if(new_x == 0) //Player Gets a Point
+  if(time > ball_update && gameIsRunning) {
+    uint8_t new_x = ball_x + ball_dir_x;
+    uint8_t new_y = ball_y + ball_dir_y;
+    // Check if we hit the vertical walls
+    if(new_x == 0) //Player Gets a Point
         {
             PLAYER_SCORE++;
             if(PLAYER_SCORE==MAX_SCORE)
